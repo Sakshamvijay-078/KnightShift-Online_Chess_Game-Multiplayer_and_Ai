@@ -70,8 +70,9 @@ To set up the project locally:
   -  Multiplayer: Invite a friend and start a real-time chess match.
   -  AI Opponent: Select a difficulty level and challenge the computer.
 - Discover Movies: Browse trending and recommended movies or search for specific titles to view detailed information.
+## Stockfish - engine
+For more Detail about Stockfish. Do check out [Link Text](https://stockfishchess.org/)
 ## Contributing
-
 Contributions are welcome! Please fork the repository and submit a pull request with your enhancements.
 
 
