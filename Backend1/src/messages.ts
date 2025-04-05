@@ -1,0 +1,16 @@
+export const INIT_GAME = 'init_game';
+export const MOVE = 'move';
+export const AiMOVE = 'ai_move';
+export const GAME_OVER = 'game_over';
+export const WRONG_MOVE = 'wrong_move';
+export const AiWRONG_MOVE = 'ai_wrong_move';
+export const RESIGN = 'resign';
+export const TURN = 'turn';
+export const INVALID = "invalid";
+export const REFRESH = "refresh";
+export const PROMOTION = "promotion";
+export const AiRESIGN = "ai_resign";
+export const AiINIT_GAME = "ai_init_game";
+export const AiGAME_OVER = "ai_game_over";
+export const AiREMOVE_USER = "ai_remove_user";
+export const AiREFRESH = "ai_refresh";
