@@ -1,0 +1,54 @@
+.chessBoard {
+  border-radius: 1rem;
+}
+.copy_0_0 {
+  border-radius: 1rem 0px 0px 0px;
+}
+.copy_0_7 {
+  border-radius: 0px 1rem 0px 0px;
+}
+.copy_7_0 {
+  border-radius: 0px 0px 0px 1rem;
+}
+.copy_7_7 {
+  border-radius: 0px 0px 1rem 0px;
+}
+.color {
+  background-color: rgba(227, 245, 222, 0.405);
+}
+.borderr {
+  margin-top: 1rem;
+}
+.move {
+  margin-top: 2rem;
+  border-radius: 1rem;
+  width: 90%;
+  height: 400px;
+  overflow: auto;
+}
+.move::-webkit-scrollbar {
+  display: none;
+}
+.waiting {
+  font-size: 17px;
+  justify-content: center;
+  align-items: center;
+}
+.youAreB{
+  border: 2px solid white;
+}
+.youAreW{
+  border: 2px solid rgb(158, 158, 158) ;
+}
+.button{
+  border-radius: 6px;
+  width: auto;
+  font-weight: bold;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  align-self: center;
+  margin-right: 10px;
+  padding: 6px;
+}

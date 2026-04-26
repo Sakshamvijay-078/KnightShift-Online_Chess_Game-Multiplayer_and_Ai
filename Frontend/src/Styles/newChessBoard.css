@@ -1,0 +1,157 @@
+.chessBoard {
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    border: 2px solid #333;
+    background-color: #ddd;
+    max-width: 640px;
+    user-select: none;
+    border-radius: 10px;
+    overflow: hidden;
+    border-radius: 1rem;
+  }
+  
+  .chessBoard div {
+    display: flex;
+  }
+  
+  .w-20 {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .bg-green-700 {
+    background-color: #6b8e23;
+  }
+  
+  .bg-green-100 {
+    background-color: #f0f8e6;
+  }
+  
+  .text-black {
+    color: black;
+  }
+  
+  .copy_0_0 {
+    border-radius: 1rem 0px 0px 0px;
+  }
+  .copy_0_7 {
+    border-radius: 0px 1rem 0px 0px;
+  }
+  .copy_7_0 {
+    border-radius: 0px 0px 0px 1rem;
+  }
+  .copy_7_7 {
+    border-radius: 0px 0px 1rem 0px;
+  }
+  
+  /* Highlight selected square */
+  .color {
+    border: 3px solid #ffcc00;
+    box-shadow: 0 0 10px #ffcc00;
+    transition: box-shadow 0.2s ease-in-out;
+  }
+  
+  /* Promotion Modal Styling */
+  .promotion-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: fit-content;
+    width: 90%;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .modal-content h2 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .piece-options {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  .piece-button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .piece-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .piece-image {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 5px;
+  }
+  
+  .piece-button span {
+    font-size: 14px;
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .piece-button:hover span {
+    color: #000;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .chessBoard {
+      max-width: 320px;
+    }
+  
+    .w-20 {
+      width: 40px;
+      height: 40px;
+    }
+  
+    .piece-image {
+      width: auto;
+      height: auto;
+    }
+  
+    .modal-content h2 {
+      font-size: 20px;
+    }
+  }
+  
