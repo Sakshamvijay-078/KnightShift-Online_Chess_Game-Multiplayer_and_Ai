@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 import { 
     GAME_OVER, INIT_GAME, INIT_FRIEND_GAME, INVALID, 
     MOVE, REFRESH, RESIGN, CHALLENGE_SEND, CHALLENGE_RECEIVE, 
-    CHALLENGE_ACCEPT, CHALLENGE_DECLINE, SEND_CHAT 
+    CHALLENGE_ACCEPT, CHALLENGE_DECLINE, SEND_CHAT, LEAVE_QUEUE 
 } from "./messages";
 import { Game } from "./Game";
 import { AiGame } from "./AiGame";
@@ -42,10 +42,27 @@ export class GameManager {
         this.onlineUsers = new Map();
     }
 
+    // Helper: find active (non-game-over) game for a user
+    private findActiveGame(userId: string): Game | undefined {
+        return this.games.find(game => 
+            !game.gameOver && 
+            (game.player1User === userId || game.player2User === userId)
+        );
+    }
+
+    // Helper: clean up finished games from the array
+    private cleanupFinishedGames() {
+        this.games = this.games.filter(g => !g.gameOver);
+    }
+
     addUser(socket: WebSocket) {
         this.addHandler(socket);
         
         socket.on('close', () => {
+            // If the disconnecting user was the pending user, clear them
+            if (this.pendingUser && this.pendingUser.socket === socket) {
+                this.pendingUser = null;
+            }
             // Find and remove from onlineUsers on disconnect
             for (const [email, user] of this.onlineUsers.entries()) {
                 if (user.socket === socket) {
@@ -62,7 +79,7 @@ export class GameManager {
             
             // Register socket globally on any REFRESH or INIT ONLY if email exists securely
             if (message.user && message.user.email) {
-                console.log("Registered user:", message.user.email); this.onlineUsers.set(message.user.email, {
+                this.onlineUsers.set(message.user.email, {
                     socket,
                     userId: message.user._id,
                     email: message.user.email,
@@ -82,7 +99,7 @@ export class GameManager {
                 }
 
                 const targetUser = this.onlineUsers.get(targetEmail);
-                console.log("Target user found:", !!targetUser, targetEmail); if (targetUser) {
+                if (targetUser) {
                     targetUser.socket.send(JSON.stringify({
                         type: CHALLENGE_RECEIVE,
                         challengerEmail: message.user?.email || "unknown",
@@ -101,7 +118,8 @@ export class GameManager {
                 
                 const challenger = this.onlineUsers.get(challengerEmail);
                 if (challenger) {
-                    // Match found! They accepted.
+                    // Clean up any stale finished games for both users before starting new one
+                    this.cleanupFinishedGames();
                     const game = new Game(challenger.socket, socket, challenger.userId, message.user._id, duration);
                     this.games.push(game);
                 } else {
@@ -125,16 +143,43 @@ export class GameManager {
 
             if (message.type === INIT_GAME) {
                 const duration = message.duration || 600;
+                
+                // Clean up any stale finished games for this user
+                this.cleanupFinishedGames();
+                
+                // Prevent matching if user is already in an active game
+                const existingGame = this.findActiveGame(message.user._id);
+                if (existingGame) {
+                    socket.send(JSON.stringify({ type: INVALID, message: "You are already in an active game." }));
+                    return;
+                }
+                
                 if (this.pendingUser) {
                     if (this.pendingUser.userId !== message.user._id) {
+                        // Also check pending user isn't already in an active game
+                        const pendingExistingGame = this.findActiveGame(this.pendingUser.userId);
+                        if (pendingExistingGame) {
+                            // Pending user is stale, replace them
+                            this.pendingUser = { socket, userId: message.user._id, duration };
+                            return;
+                        }
+                        
                         const game = new Game(this.pendingUser.socket, socket, this.pendingUser.userId, message.user._id, duration);
                         this.games.push(game);
                         this.pendingUser = null;
                     } else {
+                        // Same user re-queued; update their socket
                         this.pendingUser = { socket, userId: message.user._id, duration };
                     }
                 } else {
                     this.pendingUser = { socket, userId: message.user._id, duration };
+                }
+            }
+
+            // Dedicated leave queue handler — clean, no side effects
+            if (message.type === LEAVE_QUEUE) {
+                if (this.pendingUser?.userId === message.user._id) {
+                    this.pendingUser = null;
                 }
             }
 
@@ -143,13 +188,11 @@ export class GameManager {
                 if(game){
                     const promotion = message.promotion || "null";
                     game.makeMove(socket, message.move, message.user._id, promotion);
-                } else {
-                    // silently ignore or respond
                 }
             }
 
             if (message.type === MOVE) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     const promotion = message.promotion || "null";
                     game.makeMove(socket, message.move, message.user._id, promotion);
@@ -157,7 +200,7 @@ export class GameManager {
             }
 
             if (message.type === SEND_CHAT) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     const senderName = message.user.firstName || "Player";
                     game.handleChat(socket, message.chatMessage, senderName);
@@ -181,13 +224,14 @@ export class GameManager {
             }
 
             if (message.type === AiGAME_OVER) {
-                const game = this.aigames.find(game => game.player1User === message.user._id);
-                this.aigames = this.aigames.filter(g => g !== game);
+                this.aigames = this.aigames.filter(g => g.player1User !== message.user._id);
             }
 
             if (message.type === GAME_OVER) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
-                this.games = this.games.filter(g => g !== game);
+                // Remove all finished games for this user
+                this.games = this.games.filter(g => 
+                    !((g.player1User === message.user._id || g.player2User === message.user._id) && g.gameOver)
+                );
             }
 
             if (message.type === AiRESIGN) {
@@ -201,12 +245,12 @@ export class GameManager {
             }
 
             if (message.type === RESIGN) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     game.resign(message.user._id);
                     this.games = this.games.filter(g => g !== game);
                 } else {
-                    socket.send(JSON.stringify({ type:GAME_OVER, winner: "null" }));
+                    // Also clear pending user if they resign while in queue
                     if (this.pendingUser?.userId === message.user._id) {
                         this.pendingUser = null;
                     }

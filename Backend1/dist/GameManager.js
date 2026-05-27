@@ -17,9 +17,22 @@ class GameManager {
         this.pendingUser = null;
         this.onlineUsers = new Map();
     }
+    // Helper: find active (non-game-over) game for a user
+    findActiveGame(userId) {
+        return this.games.find(game => !game.gameOver &&
+            (game.player1User === userId || game.player2User === userId));
+    }
+    // Helper: clean up finished games from the array
+    cleanupFinishedGames() {
+        this.games = this.games.filter(g => !g.gameOver);
+    }
     addUser(socket) {
         this.addHandler(socket);
         socket.on('close', () => {
+            // If the disconnecting user was the pending user, clear them
+            if (this.pendingUser && this.pendingUser.socket === socket) {
+                this.pendingUser = null;
+            }
             // Find and remove from onlineUsers on disconnect
             for (const [email, user] of this.onlineUsers.entries()) {
                 if (user.socket === socket) {
@@ -31,11 +44,10 @@ class GameManager {
     }
     addHandler(socket) {
         socket.on("message", (data) => {
-            var _a, _b, _c;
+            var _a, _b, _c, _d;
             const message = JSON.parse(data.toString());
             // Register socket globally on any REFRESH or INIT ONLY if email exists securely
             if (message.user && message.user.email) {
-                console.log("Registered user:", message.user.email);
                 this.onlineUsers.set(message.user.email, {
                     socket,
                     userId: message.user._id,
@@ -54,7 +66,6 @@ class GameManager {
                     senderName = message.user.email.split('@')[0];
                 }
                 const targetUser = this.onlineUsers.get(targetEmail);
-                console.log("Target user found:", !!targetUser, targetEmail);
                 if (targetUser) {
                     targetUser.socket.send(JSON.stringify({
                         type: messages_1.CHALLENGE_RECEIVE,
@@ -73,7 +84,8 @@ class GameManager {
                 const duration = message.duration || 600;
                 const challenger = this.onlineUsers.get(challengerEmail);
                 if (challenger) {
-                    // Match found! They accepted.
+                    // Clean up any stale finished games for both users before starting new one
+                    this.cleanupFinishedGames();
                     const game = new Game_1.Game(challenger.socket, socket, challenger.userId, message.user._id, duration);
                     this.games.push(game);
                 }
@@ -95,18 +107,40 @@ class GameManager {
             }
             if (message.type === messages_1.INIT_GAME) {
                 const duration = message.duration || 600;
+                // Clean up any stale finished games for this user
+                this.cleanupFinishedGames();
+                // Prevent matching if user is already in an active game
+                const existingGame = this.findActiveGame(message.user._id);
+                if (existingGame) {
+                    socket.send(JSON.stringify({ type: messages_1.INVALID, message: "You are already in an active game." }));
+                    return;
+                }
                 if (this.pendingUser) {
                     if (this.pendingUser.userId !== message.user._id) {
+                        // Also check pending user isn't already in an active game
+                        const pendingExistingGame = this.findActiveGame(this.pendingUser.userId);
+                        if (pendingExistingGame) {
+                            // Pending user is stale, replace them
+                            this.pendingUser = { socket, userId: message.user._id, duration };
+                            return;
+                        }
                         const game = new Game_1.Game(this.pendingUser.socket, socket, this.pendingUser.userId, message.user._id, duration);
                         this.games.push(game);
                         this.pendingUser = null;
                     }
                     else {
+                        // Same user re-queued; update their socket
                         this.pendingUser = { socket, userId: message.user._id, duration };
                     }
                 }
                 else {
                     this.pendingUser = { socket, userId: message.user._id, duration };
+                }
+            }
+            // Dedicated leave queue handler — clean, no side effects
+            if (message.type === messages_1.LEAVE_QUEUE) {
+                if (((_b = this.pendingUser) === null || _b === void 0 ? void 0 : _b.userId) === message.user._id) {
+                    this.pendingUser = null;
                 }
             }
             if (message.type === exports.AiMOVE) {
@@ -115,19 +149,16 @@ class GameManager {
                     const promotion = message.promotion || "null";
                     game.makeMove(socket, message.move, message.user._id, promotion);
                 }
-                else {
-                    // silently ignore or respond
-                }
             }
             if (message.type === messages_1.MOVE) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     const promotion = message.promotion || "null";
                     game.makeMove(socket, message.move, message.user._id, promotion);
                 }
             }
             if (message.type === messages_1.SEND_CHAT) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     const senderName = message.user.firstName || "Player";
                     game.handleChat(socket, message.chatMessage, senderName);
@@ -144,18 +175,17 @@ class GameManager {
                     game.changeSocket(socket, message.user._id);
                 }
                 else {
-                    if (((_b = this.pendingUser) === null || _b === void 0 ? void 0 : _b.userId) === message.user._id) {
+                    if (((_c = this.pendingUser) === null || _c === void 0 ? void 0 : _c.userId) === message.user._id) {
                         this.pendingUser.socket = socket;
                     }
                 }
             }
             if (message.type === exports.AiGAME_OVER) {
-                const game = this.aigames.find(game => game.player1User === message.user._id);
-                this.aigames = this.aigames.filter(g => g !== game);
+                this.aigames = this.aigames.filter(g => g.player1User !== message.user._id);
             }
             if (message.type === messages_1.GAME_OVER) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
-                this.games = this.games.filter(g => g !== game);
+                // Remove all finished games for this user
+                this.games = this.games.filter(g => !((g.player1User === message.user._id || g.player2User === message.user._id) && g.gameOver));
             }
             if (message.type === exports.AiRESIGN) {
                 const game = this.aigames.find(game => game.player1User === message.user._id);
@@ -168,14 +198,14 @@ class GameManager {
                 }
             }
             if (message.type === messages_1.RESIGN) {
-                const game = this.games.find(game => ((game.player1User === message.user._id) || (game.player2User === message.user._id)));
+                const game = this.findActiveGame(message.user._id);
                 if (game) {
                     game.resign(message.user._id);
                     this.games = this.games.filter(g => g !== game);
                 }
                 else {
-                    socket.send(JSON.stringify({ type: messages_1.GAME_OVER, winner: "null" }));
-                    if (((_c = this.pendingUser) === null || _c === void 0 ? void 0 : _c.userId) === message.user._id) {
+                    // Also clear pending user if they resign while in queue
+                    if (((_d = this.pendingUser) === null || _d === void 0 ? void 0 : _d.userId) === message.user._id) {
                         this.pendingUser = null;
                     }
                 }

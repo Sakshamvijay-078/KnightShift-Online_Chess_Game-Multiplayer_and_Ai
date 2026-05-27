@@ -22,3 +22,4 @@ export const AiREFRESH = "ai_refresh";
 export const TIMER_UPDATE = "timer_update";
 export const SEND_CHAT = 'send_chat';
 export const RECEIVE_CHAT = 'receive_chat';
+export const LEAVE_QUEUE = 'leave_queue';

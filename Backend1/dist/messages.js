@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RECEIVE_CHAT = exports.SEND_CHAT = exports.TIMER_UPDATE = exports.AiREFRESH = exports.AiREMOVE_USER = exports.AiGAME_OVER = exports.AiINIT_GAME = exports.AiRESIGN = exports.PROMOTION = exports.REFRESH = exports.INVALID = exports.TURN = exports.RESIGN = exports.AiWRONG_MOVE = exports.WRONG_MOVE = exports.GAME_OVER = exports.AiMOVE = exports.MOVE = exports.CHALLENGE_DECLINE = exports.CHALLENGE_ACCEPT = exports.CHALLENGE_RECEIVE = exports.CHALLENGE_SEND = exports.INIT_FRIEND_GAME = exports.INIT_GAME = void 0;
+exports.LEAVE_QUEUE = exports.RECEIVE_CHAT = exports.SEND_CHAT = exports.TIMER_UPDATE = exports.AiREFRESH = exports.AiREMOVE_USER = exports.AiGAME_OVER = exports.AiINIT_GAME = exports.AiRESIGN = exports.PROMOTION = exports.REFRESH = exports.INVALID = exports.TURN = exports.RESIGN = exports.AiWRONG_MOVE = exports.WRONG_MOVE = exports.GAME_OVER = exports.AiMOVE = exports.MOVE = exports.CHALLENGE_DECLINE = exports.CHALLENGE_ACCEPT = exports.CHALLENGE_RECEIVE = exports.CHALLENGE_SEND = exports.INIT_FRIEND_GAME = exports.INIT_GAME = void 0;
 exports.INIT_GAME = 'init_game';
 exports.INIT_FRIEND_GAME = 'init_friend_game';
 exports.CHALLENGE_SEND = 'challenge_send';
@@ -25,3 +25,4 @@ exports.AiREFRESH = "ai_refresh";
 exports.TIMER_UPDATE = "timer_update";
 exports.SEND_CHAT = 'send_chat';
 exports.RECEIVE_CHAT = 'receive_chat';
+exports.LEAVE_QUEUE = 'leave_queue';

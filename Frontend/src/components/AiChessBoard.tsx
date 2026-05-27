@@ -49,7 +49,7 @@ export const AiChessBoard = ({
     : [];
 
   return (
-    <div className="relative inline-block border-4 border-chess-panel rounded-lg shadow-2xl overflow-hidden bg-chess-panel">
+    <div className="relative inline-block border-[6px] border-white/5 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden bg-chess-darker">
       <div className="flex flex-col">
         {Array.from({ length: 8 }).map((_, rI) => {
           // If playing as black, render from bottom to top (row 7 down to 0)
@@ -102,7 +102,7 @@ export const AiChessBoard = ({
                     }}
                     key={j}
                     className={`
-                      w-12 h-12 md:w-20 md:h-20 flex justify-center items-center cursor-pointer transition-colors relative
+                      w-[clamp(2.5rem,calc((100vw-3rem)/8),5rem)] aspect-square flex justify-center items-center cursor-pointer transition-colors relative
                       ${isDarkSquare ? "bg-chess-board" : "bg-chess-boardLight"}
                       ${isSelected ? "ring-inset ring-4 ring-yellow-400 bg-yellow-200/50" : ""}
                     `}
@@ -132,14 +132,14 @@ export const AiChessBoard = ({
       </div>
 
       {promotionModal && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-chess-panel p-6 rounded-2xl shadow-xl border border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-md">
+          <div className="glass-panel p-6 rounded-3xl shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
             <h2 className="text-white text-xl font-bold text-center mb-4">Promote to</h2>
             <div className="flex gap-4">
               {["q", "r", "b", "n"].map((piece) => (
                 <button
                   key={piece}
-                  className="w-16 h-16 bg-gray-800 rounded-xl hover:bg-gray-700 transition flex items-center justify-center shadow-lg border border-gray-600 hover:scale-110 active:scale-95"
+                  className="w-16 h-16 bg-white/5 rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center shadow-lg border border-white/10 hover:border-white/30 hover:scale-110 active:scale-95"
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePromotion(piece);

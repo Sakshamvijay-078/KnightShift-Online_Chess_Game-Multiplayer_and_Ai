@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema({
 	avatar: { type: String, required: false },
 	isVerified: { type: Boolean, default: false },
 	verificationToken: { type: String, required: false },
+	friends: [{ type: String }], // array of friend email addresses
+	friendRequests: [{
+		from: { type: String, required: true },   // email of requester
+		fromName: { type: String, required: true }  // name of requester
+	}],
 });
 
 userSchema.methods.generateAuthToken = function () {

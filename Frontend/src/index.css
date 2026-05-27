@@ -4,6 +4,20 @@
 
 @layer base {
   body {
-    @apply bg-chess-dark text-chess-text m-0 p-0 font-sans antialiased;
+    @apply bg-chess-darker text-chess-text m-0 p-0 font-sans antialiased;
+    background-image: radial-gradient(circle at top, #1e293b 0%, #020617 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-chess-panel/60 backdrop-blur-md border border-white/10 shadow-glass;
+  }
+  .glass-button {
+    @apply bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300;
+  }
+  .text-glow {
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
   }
 }

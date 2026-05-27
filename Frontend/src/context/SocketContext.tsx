@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useNavigate } from 'react-router-dom';
 import { decodeToken } from '../screens/GetUserName';
 
-const WS_URL = "ws://localhost:8080";
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
 
 export interface Challenge {
     challengerEmail: string;

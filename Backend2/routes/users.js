@@ -76,4 +76,120 @@ router.put("/profile", authenticateToken, async (req, res) => {
 	}
 });
 
+// Send Friend Request
+router.post("/friends/request", authenticateToken, async (req, res) => {
+	try {
+		const { email } = req.body;
+		if (!email) return res.status(400).send({ message: "Email is required." });
+
+		const me = await User.findById(req.user._id);
+		if (!me) return res.status(404).send({ message: "User not found" });
+
+		if (me.email === email) return res.status(400).send({ message: "You cannot add yourself." });
+
+		const target = await User.findOne({ email });
+		if (!target) return res.status(404).send({ message: "No user found with that email." });
+
+		// Check if already friends
+		if (me.friends && me.friends.includes(email)) {
+			return res.status(400).send({ message: "Already friends!" });
+		}
+
+		// Check if request already sent
+		const alreadySent = target.friendRequests && target.friendRequests.some(r => r.from === me.email);
+		if (alreadySent) {
+			return res.status(400).send({ message: "Friend request already sent." });
+		}
+
+		// Check if they already sent us a request (auto-accept)
+		const theyRequestedUs = me.friendRequests && me.friendRequests.some(r => r.from === email);
+		if (theyRequestedUs) {
+			// Auto-accept
+			me.friendRequests = me.friendRequests.filter(r => r.from !== email);
+			if (!me.friends) me.friends = [];
+			if (!target.friends) target.friends = [];
+			me.friends.push(email);
+			target.friends.push(me.email);
+			await me.save();
+			await target.save();
+			return res.status(200).send({ message: `You and ${target.firstName} are now friends!` });
+		}
+
+		if (!target.friendRequests) target.friendRequests = [];
+		target.friendRequests.push({ from: me.email, fromName: me.firstName + " " + me.lastName });
+		await target.save();
+
+		res.status(200).send({ message: `Friend request sent to ${target.firstName}!` });
+	} catch (error) {
+		console.error(error);
+		res.status(500).send({ message: "Internal Server Error" });
+	}
+});
+
+// Accept Friend Request
+router.post("/friends/accept", authenticateToken, async (req, res) => {
+	try {
+		const { email } = req.body;
+		const me = await User.findById(req.user._id);
+		if (!me) return res.status(404).send({ message: "User not found" });
+
+		const requestIndex = me.friendRequests ? me.friendRequests.findIndex(r => r.from === email) : -1;
+		if (requestIndex === -1) return res.status(404).send({ message: "No such friend request." });
+
+		const target = await User.findOne({ email });
+		if (!target) return res.status(404).send({ message: "User not found." });
+
+		// Remove request and add each other as friends
+		me.friendRequests.splice(requestIndex, 1);
+		if (!me.friends) me.friends = [];
+		if (!target.friends) target.friends = [];
+		if (!me.friends.includes(email)) me.friends.push(email);
+		if (!target.friends.includes(me.email)) target.friends.push(me.email);
+
+		await me.save();
+		await target.save();
+
+		res.status(200).send({ message: `You are now friends with ${target.firstName}!` });
+	} catch (error) {
+		console.error(error);
+		res.status(500).send({ message: "Internal Server Error" });
+	}
+});
+
+// Decline Friend Request
+router.post("/friends/decline", authenticateToken, async (req, res) => {
+	try {
+		const { email } = req.body;
+		const me = await User.findById(req.user._id);
+		if (!me) return res.status(404).send({ message: "User not found" });
+
+		me.friendRequests = (me.friendRequests || []).filter(r => r.from !== email);
+		await me.save();
+
+		res.status(200).send({ message: "Friend request declined." });
+	} catch (error) {
+		res.status(500).send({ message: "Internal Server Error" });
+	}
+});
+
+// Get Friends List
+router.get("/friends", authenticateToken, async (req, res) => {
+	try {
+		const me = await User.findById(req.user._id);
+		if (!me) return res.status(404).send({ message: "User not found" });
+
+		const friendEmails = me.friends || [];
+		const friends = await User.find({ email: { $in: friendEmails } }).select("firstName lastName email avatar");
+		
+		const data = friends.map(f => ({
+			email: f.email,
+			name: f.firstName + " " + f.lastName
+		}));
+
+		res.status(200).send({ data });
+	} catch (error) {
+		res.status(500).send({ message: "Internal Server Error" });
+	}
+});
+
 module.exports = router;
