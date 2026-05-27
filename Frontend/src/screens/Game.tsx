@@ -228,7 +228,7 @@ export const Game = () => {
     const oppAdvantage = youAre === 'w' ? blackAdvantage : whiteAdvantage;
 
     return (
-        <div className="flex justify-center w-full min-h-screen bg-chess-darker py-6 px-4 relative overflow-hidden">
+        <div className="flex justify-center w-full min-h-screen bg-chess-darker py-6 px-4 relative overflow-x-hidden">
             {/* Background effects */}
             <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-chess-accent/10 rounded-full blur-[150px] pointer-events-none"></div>
             <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-chess-board/10 rounded-full blur-[150px] pointer-events-none"></div>
@@ -335,7 +335,7 @@ export const Game = () => {
 
                 {/* Right Side: Info Panel */}
                 <div className="col-span-1 lg:col-span-4 flex flex-col gap-4 max-w-[640px] mx-auto w-full">
-                    <div className="glass-panel border-white/10 rounded-3xl p-6 shadow-2xl w-full max-h-[85vh] flex flex-col relative overflow-hidden">
+                    <div className="glass-panel border-white/10 rounded-3xl p-4 md:p-6 shadow-2xl w-full lg:max-h-[85vh] flex flex-col relative overflow-hidden">
                         
                         {/* Status Header */}
                         {gameOver ? (
@@ -442,7 +442,7 @@ export const Game = () => {
                         </div>
                         
                         {/* Move History & Chat Component Layout */}
-                        <div className="mt-6 pt-2 flex-1 min-h-[300px] hidden md:flex flex-col">
+                        <div className="mt-6 pt-2 flex-1 min-h-[300px] flex flex-col">
                             {/* Tabs Navbar */}
                             <div className="flex bg-chess-darker/50 rounded-xl p-1 mb-4 shrink-0 border border-white/5">
                                 <button 

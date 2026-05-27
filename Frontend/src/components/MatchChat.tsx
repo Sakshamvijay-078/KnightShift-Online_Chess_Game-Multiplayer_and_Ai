@@ -43,7 +43,7 @@ export const MatchChat = ({
     };
 
     return (
-        <div className="flex flex-col h-full glass-panel rounded-2xl overflow-hidden mt-6 shadow-[0_0_30px_rgba(0,0,0,0.4)] border border-white/10 relative">
+        <div className="flex flex-col h-full glass-panel rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.4)] border border-white/10 relative">
             <div className="absolute top-0 right-0 w-32 h-32 bg-chess-accent/10 rounded-full blur-[40px] pointer-events-none"></div>
             
             <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4 font-bold flex items-center justify-between relative z-10">
