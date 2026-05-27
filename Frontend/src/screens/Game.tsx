@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useGlobalSocket } from "../context/SocketContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Chess } from "chess.js";
 import { decodeToken } from "./GetUserName";
 import { ChessBoard } from "../components/ChessBoard";
@@ -65,6 +65,10 @@ export const Game = () => {
     const [activeTab, setActiveTab] = useState<"moves" | "chat">("moves");
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     
+    // Mobile Chat Overlay
+    const [showMobileChat, setShowMobileChat] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    
     // Live Clocks
     const [player1Time, setPlayer1Time] = useState(600000);
     const [player2Time, setPlayer2Time] = useState(600000);
@@ -87,6 +91,13 @@ export const Game = () => {
         }, 1000);
         return () => clearInterval(interval);
     }, [playing, gameOver, turn, lastMoveTime, historyIndex]);
+
+    // Clear unread count when chat is opened
+    useEffect(() => {
+        if (showMobileChat || activeTab === "chat") {
+            setUnreadCount(0);
+        }
+    }, [showMobileChat, activeTab]);
 
     useEffect(() => {
         if (!socket) return;
@@ -153,6 +164,7 @@ export const Game = () => {
                         text: message.message,
                         isSelf: false
                     }]);
+                    setUnreadCount(prev => prev + 1);
                     break;
 
                 case GAME_OVER:
@@ -503,6 +515,56 @@ export const Game = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Floating Chat Button (Mobile) */}
+            {(playing || gameOver) && (
+                <div className="fixed bottom-6 right-6 z-50 md:hidden">
+                    <button 
+                        onClick={() => setShowMobileChat(true)}
+                        className="bg-chess-accent hover:bg-chess-accentHover text-white w-14 h-14 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-transform hover:scale-110 flex items-center justify-center relative"
+                    >
+                        <span className="text-2xl">💬</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg border-2 border-chess-darker">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Mobile Chat Overlay */}
+            {showMobileChat && (
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center md:hidden animate-in fade-in">
+                    <div className="w-full h-[75vh] bg-chess-darker rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10 flex flex-col relative animate-in slide-in-from-bottom-full duration-300">
+                        <div className="flex justify-between items-center p-4 border-b border-white/10 bg-black/20 rounded-t-3xl">
+                            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                                💬 Live Match Chat
+                            </h3>
+                            <button 
+                                onClick={() => setShowMobileChat(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-gray-300 hover:text-white hover:bg-white/20 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden p-2 pb-6">
+                            <MatchChat 
+                                messages={chatMessages} 
+                                socket={socket} 
+                                onSendLocal={(text: string) => {
+                                    setChatMessages(prev => [...prev, {
+                                        id: Date.now().toString(),
+                                        sender: "You",
+                                        text,
+                                        isSelf: true
+                                    }]);
+                                }} 
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
