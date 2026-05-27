@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useGlobalSocket } from "../context/SocketContext";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { decodeToken } from "./GetUserName";
 import { ChessBoard } from "../components/ChessBoard";
