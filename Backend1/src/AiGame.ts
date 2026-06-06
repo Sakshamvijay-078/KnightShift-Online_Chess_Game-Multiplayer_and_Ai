@@ -23,7 +23,8 @@ export class AiGame {
     this.board = new Chess();
     this.valid = false;
     this.depth = depth;
-    this.playerColor = playerColor.toLowerCase();
+    const normalized = playerColor.toLowerCase();
+    this.playerColor = normalized === "w" ? "white" : normalized === "b" ? "black" : normalized;
 
     this.player1.send(
       JSON.stringify({
@@ -31,7 +32,7 @@ export class AiGame {
         board: this.board.board(),
         fen: this.board.fen(),
         payload: {
-          color: "w",
+          color: this.playerColor === "white" ? "w" : "b",
         },
       })
     );
@@ -49,8 +50,11 @@ export class AiGame {
         const match = output.match(/bestmove\s(\S+)/);
         if (match) {
           const bestMove = match[1];
+          // Skip if stockfish says no move available (game already over)
+          if (bestMove === "(none)") return;
           console.log(bestMove);
           const moveResult = this.board.move(bestMove);
+          if (!moveResult) return; // Safety: ignore invalid moves
           this.Aimoves.push(bestMove);
           this.MoveCount++;
 
@@ -95,6 +99,7 @@ export class AiGame {
     }
 
     if (this.playerColor === "black" && this.stockfish?.stdin) {
+      this.stockfish.stdin.write(`position startpos\n`);
       this.stockfish.stdin.write(`go depth ${this.depth}\n`);
     }
   }
@@ -104,7 +109,9 @@ export class AiGame {
   }
 
   makeMove(socket: WebSocket, move: { from: string; to: string }, user: string, promotion: string) {
-    if ((this.MoveCount % 2 === 0 && this.playerColor === "black") || (this.MoveCount % 2 !== 0 && this.playerColor === "white")) {
+    // Block the move if it's not the player's turn
+    // White player moves on even MoveCount (0, 2, 4...), black on odd (1, 3, 5...)
+    if ((this.MoveCount % 2 !== 0 && this.playerColor === "white") || (this.MoveCount % 2 === 0 && this.playerColor === "black")) {
       return;
     }
     try {

@@ -142,7 +142,7 @@ export const Computer = () => {
             return;
         }
         setGameSetup(true); setWaiting(false); setPlaying(true); setTable(true); setLeave(false); setResign(true); setTurn("white");
-        socket.send(JSON.stringify({ type: AiINIT_GAME, user: decodeToken(), youAre, level }));
+        socket.send(JSON.stringify({ type: AiINIT_GAME, user: decodeToken(), color: youAre, level }));
     };
 
     return (
@@ -321,7 +321,7 @@ export const Computer = () => {
                                     {playAgain && (
                                         <button className="w-full bg-gradient-to-r from-chess-accent to-chess-accentHover text-white font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transform hover:-translate-y-0.5 transition-all outline-none" onClick={() => {
                                             setPlay(false); setPlayAgain(false); setTable(false); setWaiting(true); setLeave(false); setMoves([]); setGameOver(false);
-                                            socket.send(JSON.stringify({ type: AiINIT_GAME, user: decodeToken(), youAre, level }));
+                                            socket.send(JSON.stringify({ type: AiINIT_GAME, user: decodeToken(), color: youAre, level }));
                                         }}>Rematch AI</button>
                                     )}
                                     {resign && (
