@@ -17,13 +17,14 @@ class AiGame {
         this.board = new chess_js_1.Chess();
         this.valid = false;
         this.depth = depth;
-        this.playerColor = playerColor.toLowerCase();
+        const normalized = playerColor.toLowerCase();
+        this.playerColor = normalized === "w" ? "white" : normalized === "b" ? "black" : normalized;
         this.player1.send(JSON.stringify({
             type: messages_1.AiINIT_GAME,
             board: this.board.board(),
             fen: this.board.fen(),
             payload: {
-                color: "w",
+                color: this.playerColor === "white" ? "w" : "b",
             },
         }));
         const stockfishPath = "stockfish";
@@ -35,36 +36,51 @@ class AiGame {
                 const match = output.match(/bestmove\s(\S+)/);
                 if (match) {
                     const bestMove = match[1];
-                    console.log(bestMove);
+                    // Skip if stockfish says no move available (game already over)
+                    if (bestMove === "(none)")
+                        return;
+                    // console.log(bestMove);
+                    // Apply the move to the board immediately to keep state consistent
                     const moveResult = this.board.move(bestMove);
+                    if (!moveResult)
+                        return; // Safety: ignore invalid moves
                     this.Aimoves.push(bestMove);
                     this.MoveCount++;
-                    if (this.board.isGameOver()) {
-                        this.player1.send(JSON.stringify({
-                            type: messages_1.AiGAME_OVER,
-                            board: this.board.board(),
-                            fen: this.board.fen(),
-                            winner: this.playerColor === "white" ? "black" : "white",
-                            valid: true,
-                        }));
-                    }
-                    else {
-                        const tempFrom = bestMove.slice(0, 2);
-                        const tempTo = bestMove.slice(2, 4);
-                        this.player1.send(JSON.stringify({
-                            type: messages_1.AiMOVE,
-                            payload: {
-                                from: tempFrom,
-                                to: tempTo,
-                                san: moveResult.san,
-                                flags: moveResult.flags
-                            },
-                            board: this.board.board(),
-                            fen: this.board.fen(),
-                            turn: this.playerColor === "white" ? "white" : "black",
-                            valid: true,
-                        }));
-                    }
+                    // Realistic "thinking" delay before sending move to client
+                    // Base: 600ms + random jitter 0–800ms + 30ms per depth level
+                    const thinkingDelay = 1500 + Math.floor(Math.random() * 2500) + this.depth * 70;
+                    // Capture board/fen snapshot now (before any future moves mutate state)
+                    const boardSnapshot = this.board.board();
+                    const fenSnapshot = this.board.fen();
+                    const isOver = this.board.isGameOver();
+                    setTimeout(() => {
+                        if (isOver) {
+                            this.player1.send(JSON.stringify({
+                                type: messages_1.AiGAME_OVER,
+                                board: boardSnapshot,
+                                fen: fenSnapshot,
+                                winner: this.playerColor === "white" ? "black" : "white",
+                                valid: true,
+                            }));
+                        }
+                        else {
+                            const tempFrom = bestMove.slice(0, 2);
+                            const tempTo = bestMove.slice(2, 4);
+                            this.player1.send(JSON.stringify({
+                                type: messages_1.AiMOVE,
+                                payload: {
+                                    from: tempFrom,
+                                    to: tempTo,
+                                    san: moveResult.san,
+                                    flags: moveResult.flags
+                                },
+                                board: boardSnapshot,
+                                fen: fenSnapshot,
+                                turn: this.playerColor === "white" ? "white" : "black",
+                                valid: true,
+                            }));
+                        }
+                    }, thinkingDelay);
                 }
             });
             this.stockfish.on("error", (err) => {
@@ -76,6 +92,7 @@ class AiGame {
             console.error("Error initializing Stockfish:", err);
         }
         if (this.playerColor === "black" && ((_b = this.stockfish) === null || _b === void 0 ? void 0 : _b.stdin)) {
+            this.stockfish.stdin.write(`position startpos\n`);
             this.stockfish.stdin.write(`go depth ${this.depth}\n`);
         }
     }
@@ -84,7 +101,9 @@ class AiGame {
     }
     makeMove(socket, move, user, promotion) {
         var _a;
-        if ((this.MoveCount % 2 === 0 && this.playerColor === "black") || (this.MoveCount % 2 !== 0 && this.playerColor === "white")) {
+        // Block the move if it's not the player's turn
+        // White player moves on even MoveCount (0, 2, 4...), black on odd (1, 3, 5...)
+        if ((this.MoveCount % 2 !== 0 && this.playerColor === "white") || (this.MoveCount % 2 === 0 && this.playerColor === "black")) {
             return;
         }
         try {

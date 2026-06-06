@@ -53,40 +53,53 @@ export class AiGame {
           // Skip if stockfish says no move available (game already over)
           if (bestMove === "(none)") return;
           console.log(bestMove);
+
+          // Apply the move to the board immediately to keep state consistent
           const moveResult = this.board.move(bestMove);
           if (!moveResult) return; // Safety: ignore invalid moves
           this.Aimoves.push(bestMove);
           this.MoveCount++;
 
-          if (this.board.isGameOver()) {
-            this.player1.send(
-              JSON.stringify({
-                type: AiGAME_OVER,
-                board: this.board.board(),
-                fen: this.board.fen(),
-                winner: this.playerColor === "white" ? "black" : "white",
-                valid: true,
-              })
-            );
-          } else {
-            const tempFrom = bestMove.slice(0, 2);
-            const tempTo = bestMove.slice(2, 4);
-            this.player1.send(
-              JSON.stringify({
-                type: AiMOVE,
-                payload: { 
-                  from: tempFrom, 
-                  to: tempTo,
-                  san: moveResult.san,
-                  flags: moveResult.flags
-                },
-                board: this.board.board(),
-                fen: this.board.fen(),
-                turn: this.playerColor === "white" ? "white" : "black",
-                valid: true,
-              })
-            );
-          }
+          // Realistic "thinking" delay before sending move to client
+          // Base: 600ms + random jitter 0–800ms + 30ms per depth level
+          const thinkingDelay = 1500 + Math.floor(Math.random() * 2500) + this.depth * 70;
+
+          // Capture board/fen snapshot now (before any future moves mutate state)
+          const boardSnapshot = this.board.board();
+          const fenSnapshot = this.board.fen();
+          const isOver = this.board.isGameOver();
+
+          setTimeout(() => {
+            if (isOver) {
+              this.player1.send(
+                JSON.stringify({
+                  type: AiGAME_OVER,
+                  board: boardSnapshot,
+                  fen: fenSnapshot,
+                  winner: this.playerColor === "white" ? "black" : "white",
+                  valid: true,
+                })
+              );
+            } else {
+              const tempFrom = bestMove.slice(0, 2);
+              const tempTo = bestMove.slice(2, 4);
+              this.player1.send(
+                JSON.stringify({
+                  type: AiMOVE,
+                  payload: {
+                    from: tempFrom,
+                    to: tempTo,
+                    san: moveResult.san,
+                    flags: moveResult.flags
+                  },
+                  board: boardSnapshot,
+                  fen: fenSnapshot,
+                  turn: this.playerColor === "white" ? "white" : "black",
+                  valid: true,
+                })
+              );
+            }
+          }, thinkingDelay);
         }
       });
 
@@ -190,8 +203,8 @@ export class AiGame {
               ? "Black"
               : "White"
             : this.playerColor === "white"
-            ? "White"
-            : "Black",
+              ? "White"
+              : "Black",
       })
     );
   }

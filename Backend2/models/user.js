@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema({
 		from: { type: String, required: true },   // email of requester
 		fromName: { type: String, required: true }  // name of requester
 	}],
+	passwordResetToken: { type: String, required: false },
+	passwordResetExpires: { type: Date, required: false },
 });
 
 userSchema.methods.generateAuthToken = function () {

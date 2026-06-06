@@ -144,7 +144,7 @@ const Login = () => {
                                     <input type="checkbox" className="mr-2 rounded border-white/20 bg-chess-darker text-chess-accent focus:ring-chess-accent focus:ring-offset-chess-darker" />
                                     <span className="group-hover:text-white transition-colors">Remember me</span>
                                 </label>
-                                <a href="#" className="text-chess-accent hover:text-white transition-colors">Forgot password?</a>
+                                <a href="/forgot-password" className="text-chess-accent hover:text-white transition-colors">Forgot password?</a>
                             </div>
                         </div>
 

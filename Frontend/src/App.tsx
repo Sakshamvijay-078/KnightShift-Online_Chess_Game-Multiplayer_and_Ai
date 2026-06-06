@@ -9,6 +9,8 @@ import { Computer } from './screens/Computer';
 import Profile from './screens/Profile';
 import Login from './components/Login';
 import Signup from './components/Singup';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -33,6 +35,8 @@ const AppRoutes = () => {
       
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
       <Route path="/signup" element={<AuthRoute><Signup /></AuthRoute>} />
+      <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
     </Routes>
   );
 };
