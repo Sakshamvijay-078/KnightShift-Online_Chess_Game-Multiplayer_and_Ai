@@ -1,12 +1,50 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiGame = void 0;
 const chess_js_1 = require("chess.js");
 const child_process_1 = require("child_process");
+const fs_1 = require("fs");
+const path_1 = __importDefault(require("path"));
 const messages_1 = require("./messages");
+/** Find the stockfish binary — tries multiple locations so it works locally AND on Render/cloud */
+function resolveStockfishPath() {
+    const candidates = [
+        // System install (local Linux, Render after apt-get)
+        "/usr/bin/stockfish",
+        "/usr/games/stockfish",
+        "/usr/local/bin/stockfish",
+        // npm package native binary (may exist on some platforms)
+        path_1.default.join(__dirname, "..", "node_modules", "stockfish", "src", "stockfish"),
+        path_1.default.join(process.cwd(), "node_modules", "stockfish", "src", "stockfish"),
+        // Bundled in the repo root
+        path_1.default.join(__dirname, "..", "stockfish", "stockfish"),
+        // Plain name — rely on PATH
+        "stockfish",
+    ];
+    for (const candidate of candidates) {
+        try {
+            if (candidate === "stockfish")
+                return candidate; // fallback — let OS resolve
+            if ((0, fs_1.existsSync)(candidate)) {
+                // Make sure it's actually executable
+                (0, child_process_1.execFileSync)(candidate, ["--help"], { timeout: 2000, stdio: "ignore" });
+                console.log(`[Stockfish] Using binary: ${candidate}`);
+                return candidate;
+            }
+        }
+        catch (_a) {
+            // not executable or doesn't exist — try next
+        }
+    }
+    console.warn("[Stockfish] Could not find a working binary. Falling back to 'stockfish' on PATH.");
+    return "stockfish";
+}
 class AiGame {
     constructor(player1, player1User, depth = 15, playerColor = "white") {
-        var _a, _b;
+        var _a, _b, _c;
         this.MoveCount = 0;
         this.valid = false;
         this.stockfish = null;
@@ -27,9 +65,8 @@ class AiGame {
                 color: this.playerColor === "white" ? "w" : "b",
             },
         }));
-        const stockfishPath = "stockfish";
-        const commandStr = process.platform === "win32" ? "stockfish.exe" : "stockfish";
         try {
+            const stockfishPath = resolveStockfishPath();
             this.stockfish = (0, child_process_1.spawn)(stockfishPath);
             (_a = this.stockfish.stdout) === null || _a === void 0 ? void 0 : _a.on("data", (data) => {
                 const output = data.toString();
@@ -39,7 +76,7 @@ class AiGame {
                     // Skip if stockfish says no move available (game already over)
                     if (bestMove === "(none)")
                         return;
-                    // console.log(bestMove);
+                    console.log(`[AI] bestmove: ${bestMove}`);
                     // Apply the move to the board immediately to keep state consistent
                     const moveResult = this.board.move(bestMove);
                     if (!moveResult)
@@ -47,7 +84,7 @@ class AiGame {
                     this.Aimoves.push(bestMove);
                     this.MoveCount++;
                     // Realistic "thinking" delay before sending move to client
-                    // Base: 600ms + random jitter 0–800ms + 30ms per depth level
+                    // Base: 1500ms + random jitter 0–2500ms + 70ms per depth level
                     const thinkingDelay = 1500 + Math.floor(Math.random() * 2500) + this.depth * 70;
                     // Capture board/fen snapshot now (before any future moves mutate state)
                     const boardSnapshot = this.board.board();
@@ -87,11 +124,17 @@ class AiGame {
                 console.error("Failed to start Stockfish process:", err.message);
                 this.stockfish = null;
             });
+            (_b = this.stockfish.stderr) === null || _b === void 0 ? void 0 : _b.on("data", (data) => {
+                // Suppress noisy stderr output from stockfish
+                const msg = data.toString().trim();
+                if (msg)
+                    console.error("[Stockfish stderr]", msg);
+            });
         }
         catch (err) {
             console.error("Error initializing Stockfish:", err);
         }
-        if (this.playerColor === "black" && ((_b = this.stockfish) === null || _b === void 0 ? void 0 : _b.stdin)) {
+        if (this.playerColor === "black" && ((_c = this.stockfish) === null || _c === void 0 ? void 0 : _c.stdin)) {
             this.stockfish.stdin.write(`position startpos\n`);
             this.stockfish.stdin.write(`go depth ${this.depth}\n`);
         }

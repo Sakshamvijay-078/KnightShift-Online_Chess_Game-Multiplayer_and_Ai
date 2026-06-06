@@ -1,7 +1,43 @@
 import { Chess } from "chess.js";
 import { WebSocket } from "ws";
-import { spawn, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execFileSync } from "child_process";
+import { existsSync } from "fs";
+import path from "path";
 import { AiGAME_OVER, AiINIT_GAME, AiMOVE, AiWRONG_MOVE } from "./messages";
+
+/** Find the stockfish binary — tries multiple locations so it works locally AND on Render/cloud */
+function resolveStockfishPath(): string {
+  const candidates = [
+    // System install (local Linux, Render after apt-get)
+    "/usr/bin/stockfish",
+    "/usr/games/stockfish",
+    "/usr/local/bin/stockfish",
+    // npm package native binary (may exist on some platforms)
+    path.join(__dirname, "..", "node_modules", "stockfish", "src", "stockfish"),
+    path.join(process.cwd(), "node_modules", "stockfish", "src", "stockfish"),
+    // Bundled in the repo root
+    path.join(__dirname, "..", "stockfish", "stockfish"),
+    // Plain name — rely on PATH
+    "stockfish",
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (candidate === "stockfish") return candidate; // fallback — let OS resolve
+      if (existsSync(candidate)) {
+        // Make sure it's actually executable
+        execFileSync(candidate, ["--help"], { timeout: 2000, stdio: "ignore" });
+        console.log(`[Stockfish] Using binary: ${candidate}`);
+        return candidate;
+      }
+    } catch {
+      // not executable or doesn't exist — try next
+    }
+  }
+
+  console.warn("[Stockfish] Could not find a working binary. Falling back to 'stockfish' on PATH.");
+  return "stockfish";
+}
 
 export class AiGame {
   public player1: WebSocket;
@@ -37,12 +73,8 @@ export class AiGame {
       })
     );
 
-    const stockfishPath = "stockfish";
-
-    const commandStr = process.platform === "win32" ? "stockfish.exe" : "stockfish";
-
-
     try {
+      const stockfishPath = resolveStockfishPath();
       this.stockfish = spawn(stockfishPath);
 
       this.stockfish.stdout?.on("data", (data) => {
@@ -52,7 +84,7 @@ export class AiGame {
           const bestMove = match[1];
           // Skip if stockfish says no move available (game already over)
           if (bestMove === "(none)") return;
-          console.log(bestMove);
+          console.log(`[AI] bestmove: ${bestMove}`);
 
           // Apply the move to the board immediately to keep state consistent
           const moveResult = this.board.move(bestMove);
@@ -61,7 +93,7 @@ export class AiGame {
           this.MoveCount++;
 
           // Realistic "thinking" delay before sending move to client
-          // Base: 600ms + random jitter 0–800ms + 30ms per depth level
+          // Base: 1500ms + random jitter 0–2500ms + 70ms per depth level
           const thinkingDelay = 1500 + Math.floor(Math.random() * 2500) + this.depth * 70;
 
           // Capture board/fen snapshot now (before any future moves mutate state)
@@ -107,6 +139,13 @@ export class AiGame {
         console.error("Failed to start Stockfish process:", err.message);
         this.stockfish = null;
       });
+
+      this.stockfish.stderr?.on("data", (data) => {
+        // Suppress noisy stderr output from stockfish
+        const msg = data.toString().trim();
+        if (msg) console.error("[Stockfish stderr]", msg);
+      });
+
     } catch (err) {
       console.error("Error initializing Stockfish:", err);
     }
